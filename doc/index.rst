@@ -1,13 +1,30 @@
-Telepot Tutorial
-================
+Introduction
+============
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   reference
+
+Telepot helps you build applications for `Telegram Bot API <https://core.telegram.org/bots>`_.
+It works on Python 2.7 and Python 3. It also has an `async version <#async-version-python-3-5>`_
+based on `asyncio <https://docs.python.org/3/library/asyncio.html>`_ and Python 3.5+.
+
+For a time, I tried to list the features here like many projects do. Eventually, I gave up.
+
+For common and straight-forward features, I find them too trivial to worth listing.
+For more unique and novel features, I cannot find standard terms to describe them.
+The best way to experience telepot is by reading this page and going through the
+`examples <https://github.com/nickoala/telepot/tree/master/examples>`_. Let's go.
 
 Installation
 ------------
 
 pip::
 
-    $ sudo pip install telepot
-    $ sudo pip install telepot --upgrade  # UPGRADE
+    $ pip install telepot
+    $ pip install telepot --upgrade  # UPGRADE
 
 easy_install::
 
@@ -16,9 +33,9 @@ easy_install::
 
 Download manually::
 
-    $ wget https://pypi.python.org/packages/source/t/telepot/telepot-8.2.zip
-    $ unzip telepot-8.2.zip
-    $ cd telepot-8.2
+    $ wget https://pypi.python.org/packages/source/t/telepot/telepot-9.1.zip
+    $ unzip telepot-9.1.zip
+    $ cd telepot-9.1
     $ python setup.py install
 
 Get a token
@@ -144,7 +161,7 @@ construction of these keyboards.
 
 Pressing a button on a *custom* keyboard results in a
 `Message <https://core.telegram.org/bots/api#message>`_ object sent to the bot,
-which is no different from a regular chat message sent by typing.
+which is no different from a regular chat message composed by typing.
 
 Pressing a button on an *inline* keyboard results in a
 `CallbackQuery <https://core.telegram.org/bots/api#callbackquery>`_ object sent
@@ -162,7 +179,7 @@ underlying object:
 - a Message object gives the flavor ``chat`` or ``edited_chat`` (because the
   sender may edit a previous message)
 - a CallbackQuery object gives the flavor ``callback_query``
-- and there are more flavors, which you will come to shortly.
+- there are two more flavors, which you will come to shortly.
 
 Use :func:`telepot.flavor` to check a message's flavor.
 
@@ -236,13 +253,13 @@ inline queries sequentially. Ideally, whenever we see a new inline query coming 
 the same user, it should override and cancel any preceding inline queries being processed
 (that belong to the same user).
 
-My solution is this. An ``Answerer`` takes an inline query, inspects its ``from`` ``id``
+My solution is this. An :class:`.Answerer` takes an inline query, inspects its ``from`` ``id``
 (the originating user id), and checks to see whether that user has an *unfinished* thread
 processing a preceding inline query. If there is, the unfinished thread will be cancelled
 before a new thread is spawned to process the latest inline query. In other words,
-an ``Answerer`` ensures **at most one** active inline-query-processing thread per user.
+an :class:`.Answerer` ensures **at most one** active inline-query-processing thread per user.
 
-``Answerer`` also frees you from having to call :meth:`.Bot.answerInlineQuery` every time.
+:class:`.Answerer` also frees you from having to call :meth:`.Bot.answerInlineQuery` every time.
 You supply it with a *compute function*. It takes that function's returned value and calls
 :meth:`.Bot.answerInlineQuery` to send the results. Being accessible by multiple threads,
 the compute function must be **thread-safe**.
@@ -269,15 +286,19 @@ by an individual user. If no message is received after 10 seconds, it starts ove
 The counting is done *per chat* - that's the important point.
 
 .. literalinclude:: _code/counter.py
-   :emphasize-lines: 16-18
+   :emphasize-lines: 16-19
 
-A ``DelegatorBot`` is able to spawn *delegates*. Above, it is spawning one ``MessageCounter``
+A :class:`.DelegatorBot` is able to spawn *delegates*. Above, it is spawning one ``MessageCounter``
 *per chat id*.
 
-Detailed explanation of the delegation mechanism (e.g. how and when a ``MessageCounter`` is created, and why)
-is beyond the scope here. Please refer to :class:`telepot.DelegatorBot`.
+Also noteworthy is :func:`.pave_event_space()`. To kill itself after 10 seconds
+of inactivity, the delegate schedules a timeout event. For events to work, we
+need to prepare an *event space*.
 
-Per-User Inline Handler
+Detailed explanation of the delegation mechanism (e.g. how and when a ``MessageCounter`` is created, and why)
+is beyond the scope here. Please refer to :class:`.DelegatorBot`.
+
+Inline Handler per User
 -----------------------
 
 You may also want to answer inline query differently depending on user. When Alice asks Bot
@@ -286,11 +307,11 @@ the same question.
 
 In the code sample below, pay attention to these things:
 
-- ``AnswererMixin`` adds an ``answerer`` instance to the object
-- ``per_inline_from_id()`` ensures one instance of ``QueryCounter`` per originating user
+- :class:`.AnswererMixin` adds an :class:`.Answerer` instance to the object
+- :func:`.per_inline_from_id` ensures one instance of :class:`QueryCounter` per originating user
 
 .. literalinclude:: _code/inline_per_user.py
-   :emphasize-lines: 6,29,38
+   :emphasize-lines: 6,29,39
 
 Async Version (Python 3.5+)
 ---------------------------
@@ -308,16 +329,16 @@ If your O/S does not have Python 3.5 built in, you have to compile it yourself::
     $ sudo apt-get upgrade
     $ sudo apt-get install libssl-dev openssl libreadline-dev
     $ cd ~
-    $ wget https://www.python.org/ftp/python/3.5.1/Python-3.5.1.tgz
-    $ tar zxf Python-3.5.1.tgz
-    $ cd Python-3.5.1
+    $ wget https://www.python.org/ftp/python/3.5.2/Python-3.5.2.tgz
+    $ tar zxf Python-3.5.2.tgz
+    $ cd Python-3.5.2
     $ ./configure
     $ make
     $ sudo make install
 
 Finally::
 
-    $ sudo pip3.5 install telepot
+    $ pip3.5 install telepot
 
 In case you are not familiar with asynchronous programming, let's start by learning about generators and coroutines:
 
@@ -349,7 +370,7 @@ will not work in the interactive Python interpreter like regular functions would
 They will have to be driven by an event loop.
 
 Async version is under module :mod:`telepot.aio`. I duplicate the message counter example
-below in async style. Pay attention to these things:
+below in async style:
 
 - Substitute async version of selected classes and functions
 - Use ``async/await`` to do asynchronous operations
@@ -357,13 +378,5 @@ below in async style. Pay attention to these things:
 .. literalinclude:: _code/countera.py
    :emphasize-lines: 4,6,11-13
 
-Usage
------
-
-I am composing a page illustrating common usages. It is coming soon ...
-
-Reference
----------
-
-| `Traditional Version <reference.html>`_
-| `Async Version <referencea.html>`_
+`More Examples » <https://github.com/nickoala/telepot/tree/master/examples>`_
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
